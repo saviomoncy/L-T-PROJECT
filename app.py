@@ -1,27 +1,11 @@
 import os
 import pandas as pd
 import numpy as np
-from flask import Flask, request, render_template, redirect, url_for, send_from_directory, flash
+import streamlit as st
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 import matplotlib.pyplot as plt
-
-# Flask App Initialization
-app = Flask(__name__)
-app.secret_key = 'secret_key'  # Required for flash messages
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'csv'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Ensure upload directory exists
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-# Check file extension
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # PCA Function
 def apply_pca(data, n_components=2):
@@ -35,98 +19,69 @@ def apply_lda(X, y, n_components=2):
     lda_components = lda.fit_transform(X, y)
     return lda_components
 
-# Route for Upload and Visualization
-@app.route('/', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        # Check if file exists
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
+# Streamlit App Initialization
+st.title("PCA and LDA Visualization App")
+st.write("""
+### Upload a CSV file with features and target columns
+The last column will be treated as the target for classification.
+""")
+
+# File upload
+uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
+if uploaded_file is not None:
+    # Read dataset
+    df = pd.read_csv(uploaded_file)
+    st.write("### Dataset Preview:")
+    st.dataframe(df.head())
+
+    if df.shape[1] < 3:
+        st.error("Dataset must have at least 2 features and 1 target column.")
+    else:
+        # Split features and target
+        X = df.iloc[:, :-1]  # Features
+        y = df.iloc[:, -1]   # Target column
         
-        file = request.files['file']
+        # Encode labels if necessary
+        le = LabelEncoder()
+        y_encoded = le.fit_transform(y)
         
-        # Check for valid file
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-        
-        if file and allowed_file(file.filename):
-            filename = file.filename
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            # Read and preprocess the dataset
-            df = pd.read_csv(filepath)
-            if df.shape[1] < 3:  # PCA and LDA require enough features
-                flash("Dataset must have at least 2 features and 1 target column")
-                return redirect(request.url)
-            
-            # Split features and target
-            X = df.iloc[:, :-1]  # Features
-            y = df.iloc[:, -1]   # Target column
-            
-            # Encode labels if necessary
-            le = LabelEncoder()
-            y_encoded = le.fit_transform(y)
-            
-            # Scale features
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X)
-            
-            # PCA and LDA
-            pca_result = apply_pca(X_scaled, n_components=2)
-            lda_result = None
-            if len(np.unique(y_encoded)) > 1:  # LDA requires multiple classes
-                lda_result = apply_lda(X_scaled, y_encoded, n_components=2)
-            
-            # Generate plots
-            plt.figure(figsize=(12, 4))
+        # Scale features
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
 
-            # Original Data (First 2 features)
-            plt.subplot(1, 3, 1)
-            plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=y_encoded, cmap='viridis', s=10)
-            plt.title("Original Data (First 2 Features)")
-            plt.xlabel("Feature 1")
-            plt.ylabel("Feature 2")
+        # PCA and LDA
+        pca_result = apply_pca(X_scaled, n_components=2)
+        lda_result = None
+        if len(np.unique(y_encoded)) > 1:
+            lda_result = apply_lda(X_scaled, y_encoded, n_components=2)
 
-            # PCA Reduced
-            plt.subplot(1, 3, 2)
-            plt.scatter(pca_result[:, 0], pca_result[:, 1], c=y_encoded, cmap='viridis', s=10)
-            plt.title("PCA Reduced Data")
-            plt.xlabel("Principal Component 1")
-            plt.ylabel("Principal Component 2")
+        # Generate plots
+        st.write("### Data Visualization")
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
-            # LDA Reduced (if available)
-            if lda_result is not None:
-                plt.subplot(1, 3, 3)
-                plt.scatter(lda_result[:, 0], lda_result[:, 1], c=y_encoded, cmap='viridis', s=10)
-                plt.title("LDA Reduced Data")
-                plt.xlabel("LDA Component 1")
-                plt.ylabel("LDA Component 2")
-            else:
-                plt.subplot(1, 3, 3)
-                plt.text(0.5, 0.5, "LDA requires multiple classes", horizontalalignment='center')
-                plt.axis('off')
-                plt.title("LDA Not Applicable")
+        # Original Data (First 2 features)
+        axes[0].scatter(X_scaled[:, 0], X_scaled[:, 1], c=y_encoded, cmap='viridis', s=10)
+        axes[0].set_title("Original Data (First 2 Features)")
+        axes[0].set_xlabel("Feature 1")
+        axes[0].set_ylabel("Feature 2")
 
-            plt.tight_layout()
-            plot_path = os.path.join(UPLOAD_FOLDER, 'comparison_plot.png')
-            plt.savefig(plot_path)
-            plt.close()
+        # PCA Reduced
+        axes[1].scatter(pca_result[:, 0], pca_result[:, 1], c=y_encoded, cmap='viridis', s=10)
+        axes[1].set_title("PCA Reduced Data")
+        axes[1].set_xlabel("Principal Component 1")
+        axes[1].set_ylabel("Principal Component 2")
 
-            return render_template('result.html', image=plot_path)
-        
-        flash('Allowed file types: .csv')
-        return redirect(request.url)
+        # LDA Reduced (if available)
+        if lda_result is not None:
+            axes[2].scatter(lda_result[:, 0], lda_result[:, 1], c=y_encoded, cmap='viridis', s=10)
+            axes[2].set_title("LDA Reduced Data")
+            axes[2].set_xlabel("LDA Component 1")
+            axes[2].set_ylabel("LDA Component 2")
+        else:
+            axes[2].text(0.5, 0.5, "LDA requires multiple classes", horizontalalignment='center', fontsize=12)
+            axes[2].axis('off')
+            axes[2].set_title("LDA Not Applicable")
 
-    return render_template('upload.html')
-
-# Route to serve image files
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-# Run Flask App
-if __name__ == '__main__':
-    app.run(debug=True)
+        plt.tight_layout()
+        st.pyplot(fig)
