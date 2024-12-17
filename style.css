@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Comparison Results</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background-color: #fff5f5;
+            font-family: Arial, sans-serif;
+        }
+
+        .card {
+            margin-top: 50px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background: linear-gradient(45deg, #ff4d4d, #cc0000);
+            color: white;
+        }
+
+        .card-body img {
+            border: 2px solid #ffcccc;
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .btn-primary {
+            background-color: #ff4d4d;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2>Dimension Reduction Comparison</h2>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ url_for('uploaded_file', filename='comparison_plot.png') }}" alt="Comparison Plot"
+                    class="img-fluid">
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('upload_file') }}" class="btn btn-primary">Upload Another File</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Upload Dataset</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header bg-primary text-white text-center">
+                <h2>Upload a CSV Dataset</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" class="text-center">
+                    <div class="form-group">
+                        <input type="file" name="file" class="form-control-file">
+                    </div>
+                    <button type="submit" class="btn btn-success">Upload</button>
+                </form>
+
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="alert alert-warning">
+                    <ul>
+                        {% for message in messages %}
+                        <li>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            <div class="card-footer text-center">
+                <p>Allowed file type: <strong>.csv</strong></p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
